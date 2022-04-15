@@ -1,0 +1,259 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<title>Uniprocessor Scheduling</title>
+<meta name="GENERATOR" content="Microsoft FrontPage 3.0">
+<script src="inclass.js" language="JavaScript">
+</script>
+<script language="JavaScript">
+function getarrs(){	//pull data from form and create process arrays
+	pa= new Array();	//arrival array
+	ps= new Array();	//service time
+	tq = new Array();	//computed turnaround time  PROCESS 0 represents the idle time or busy wait process
+	seq = new Array(); //each scheduling algorithm sets this array with the
+							// sequence of processes executed per time step
+    pa[1]=parseInt(document.sched.p1a.value);	//process 1 arrival time
+    pa[2]=parseInt(document.sched.p2a.value);	//process 2
+    pa[3]=parseInt(document.sched.p3a.value);
+    pa[4]=parseInt(document.sched.p4a.value);
+    pa[5]=parseInt(document.sched.p5a.value);
+    ps[1]=parseInt(document.sched.p1s.value);	//process 1 service time
+    ps[2]=parseInt(document.sched.p2s.value);
+    ps[3]=parseInt(document.sched.p3s.value);
+    ps[4]=parseInt(document.sched.p4s.value);
+    ps[5]=parseInt(document.sched.p5s.value);
+			//this test may not be necessary, but is a simplification
+	if(!(pa[1]<=pa[2]&&pa[2]<=pa[3]&&pa[3]<=pa[4]&&pa[4]<=pa[5]))
+		alert("Arrival times are not in order."); 
+}
+
+function display(title){  // this function generates the display grid from seq[]
+								// and writes it (sets value property) to the approp. textarea
+	var g = new Array();
+	grid = "t=0123456789012345678901234567890\n";
+	for(var p=1; p<=5; p++)g[p] = ""+p+" "; // gen process #
+	g[0] = "i-";									//idle process
+	for(var i=0; i<t; i++){
+		for(p=0; p<6; p++){			//mostly blanks but fill in the process that was active
+			if(seq[i]==p){			//on the right line
+				g[p] += ""+p;
+			} else {
+				g[p] += " ";
+			}
+		}
+	}
+	for(p=0; p<6; p++){		//create the one string for the window
+		grid += g[p]+"\n";
+	}
+	if(document.sched.winchoice[0].checked){ // write the title and grid string to the textarea
+		document.sched.wtitle1.value = title;		// as specified by the radio buttons
+		document.sched.window1.value = grid;
+	} else {
+		document.sched.wtitle2.value = title;
+		document.sched.window2.value = grid;
+	}
+	with (document.sched){ //set turnaround time and t-a-t/service time
+		tq1.value = tq[1]; tqs1.value = x = tq[1]/parseInt(p1s.value);
+		tq2.value = tq[2]; tqs2.value = y = tq[2]/parseInt(p2s.value); x+= y;
+		tq3.value = tq[3]; tqs3.value = y = tq[3]/parseInt(p3s.value);x+= y;
+		tq4.value = tq[4]; tqs4.value = y = tq[4]/parseInt(p4s.value);x+= y;
+		tq5.value = tq[5]; tqs5.value = y = tq[5]/parseInt(p5s.value);x+= y;
+		tq6.value = (tq[1]+tq[2]+tq[3]+tq[4]+tq[5])/5;  // show means of these times
+		tqs6.value = x/5;
+	}
+}
+
+function FCFS(){ // First-Come First-Served
+	getarrs();
+	t = 0;
+	for(p=1; p<=5; p++){
+		while(t<pa[p]){
+			seq[t++] = 0;
+		}
+		for(i=0; i<ps[p]; i++){
+			seq[t++] = p;
+		}
+		tq[p] = t - pa[p]; //turnaround time
+	}
+	display("First Come First Served");
+}
+
+function RR(quant){	//Round Robin
+	getarrs();
+	t = 0;	          //time
+	q = new Array(); //round robin queue
+	qlen = qptr = 0; //length and pointer
+	n = 5;
+	while(n > 0){
+		for(p=1; p<=5; p++){ // check for arriving processes
+			if(0<=pa[p] && pa[p]<=t){
+				q[qlen++] = p;
+				tq[p] = -pa[p];
+				pa[p] = -1;
+			}
+		}
+		if(qlen==0){  //  if nothing in queue bump idle time.
+			seq[t++] = 0;
+			continue;
+		} else {	// move to next entry in queue
+			qptr = (qptr+1)%qlen;
+		}
+
+		qtm = quant;
+		p = q[qptr];  // pull next process from queue
+		while(qtm>0 && ps[p]>0){ // let process run thru quantum
+			seq[t++] = p;
+			qtm--;
+			ps[p]--;
+			if(ps[p]==0){ // if process ends, record turnaround
+				tq[p] += t;
+				for(i=qptr; i<qlen-1; i++){// remove process from queue
+					q[i] = q[i+1];
+				}
+				qlen--;
+				qptr--; //adjust pointer 
+				n--;
+			}
+		}
+	}
+	display("Round Robin: q="+quant);
+}
+function SPN(){ // Shortest Process Next (nonpreemptive)
+	getarrs();
+	t = 0;
+	for(p=1; p<=5; p++){
+		s = -1;
+		while(s < 0){
+			for(i=1; i<=5; i++){ 
+				if(ps[i]>0 && pa[i]<=t){ // search for shortest job that is ready
+					if(s == -1 || ps[i]<ps[s]){ // if first ready job or a shorter one
+						s = i;
+					}
+				}
+			}
+			if(s >= 0) break; //found a job to run
+			seq[t++] = 0;
+		}
+		while(ps[s]--){ //run the job in its entirety
+			seq[t++] = s;
+		}
+		tq[s] = t - pa[s]; //turnaround time
+	}
+	display("Shortest Process Next");
+}
+		
+</script>
+</head>
+
+<body>
+
+<h1 align="center">Uniprocessor Scheduling</h1>
+<div ALIGN="right">
+
+  <p><font size="1">Page last updated <!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%m/%d/%y" startspan -->09/01/00<!--webbot bot="Timestamp" endspan i-checksum="12238" --></font></p>
+
+</div>
+
+<p>&nbsp;</p>
+
+<p><a name="SchedAlg"></a></p>
+
+<hr>
+
+<h2>Scheduling Algorithms</h2>
+
+<p>Preemptive vs Nonpreemptive 
+
+<ul>
+  <li><strong>First Come First Served (FCFS) </strong>- execute each program in completion as
+    they come into the system (nonpreemp)</li>
+  <li><strong>Round Robin</strong> - give each process a maximum quantum (time slice) of CPU
+    time and then move to the next process in the queue (preemp)</li>
+  <li><strong>Shortest Process Next (SPN)</strong> - choose the job that has the least amount
+    of time left (nonpreemp); starvation of longer jobs possible; requires knowledge or
+    estimation of job time</li>
+  <li><strong>Shortest Remaining Time (SRT)</strong> - a preempt. version of SPN</li>
+  <li><strong>Highest Response Ratio Next</strong> - calculate the ratio (wait +
+    service)/service; estimation of service time is needed; this prevents starvation with
+    built in aging.</li>
+  <li><strong>Feedback queues</strong> - as processes use more time, they are moved to queues
+    of lower priority.</li>
+</ul>
+
+<p><a name="Simulations"></a></p>
+
+<p>&nbsp;</p>
+
+<h3>Simulations</h3>
+
+<form method="POST" name="sched" action="../_vti_bin/shtml.exe/os/ch9.htm" onSubmit="" webbot-action="--WEBBOT-SELF--">
+  <!--webbot bot="SaveResults" U-File="../ia/backup/_private/form_results.txt" S-Format="TEXT/CSV" S-Label-Fields="TRUE" startspan --><strong>[FrontPage Save Results Component]</strong><!--webbot bot="SaveResults" endspan i-checksum="6561" --><table border="0">
+    <tr>
+      <td rowspan="2">&nbsp;<table border="0">
+          <tr>
+            <th width="33%">Process</th>
+            <th>Arrival time</th>
+            <th width="34%">Service Time</th>
+            <th width="34%">T<sub>q</sub></th>
+            <th width="34%">T<sub>q</sub>/T<sub>s</sub></th>
+          </tr>
+          <tr>
+            <th width="33%">1</th>
+            <td width="33%"><input type="text" name="p1a" size="4" value="0"></td>
+            <td width="34%"><input type="text" name="p1s" size="4" value="1"></td>
+            <td width="34%"><input type="text" name="tq1" size="4"></td>
+            <td width="34%"><input type="text" name="tqs1" size="4"></td>
+          </tr>
+          <tr>
+            <th width="33%">2</th>
+            <td width="33%"><input type="text" name="p2a" size="4" value="1"></td>
+            <td width="34%"><input type="text" name="p2s" size="4" value="1"></td>
+            <td width="34%"><input type="text" name="tq2" size="4"></td>
+            <td width="34%"><input type="text" name="tqs2" size="4"></td>
+          </tr>
+          <tr>
+            <th width="33%">3</th>
+            <td width="33%"><input type="text" name="p3a" size="4" value="2"></td>
+            <td width="34%"><input type="text" name="p3s" size="4" value="1"></td>
+            <td width="34%"><input type="text" name="tq3" size="4"></td>
+            <td width="34%"><input type="text" name="tqs3" size="4"></td>
+          </tr>
+          <tr>
+            <th width="33%">4</th>
+            <td width="33%"><input type="text" name="p4a" size="4" value="3"></td>
+            <td width="34%"><input type="text" name="p4s" size="4" value="1"></td>
+            <td width="34%"><input type="text" name="tq4" size="4"></td>
+            <td width="34%"><input type="text" name="tqs4" size="4"></td>
+          </tr>
+          <tr>
+            <th width="33%">5</th>
+            <td width="33%"><input type="text" name="p5a" size="4" value="4"></td>
+            <td width="34%"><input type="text" name="p5s" size="4" value="1"></td>
+            <td width="34%"><input type="text" name="tq5" size="4"></td>
+            <td width="34%"><input type="text" name="tqs5" size="4"></td>
+          </tr>
+          <tr>
+            <th width="33%"></th>
+            <td width="33%"></td>
+            <th width="34%">Mean</th>
+            <td width="34%"><input type="text" name="tq6" size="4"></td>
+            <td width="34%"><input type="text" name="tqs6" size="4"></td>
+          </tr>
+          <tr>
+            <td colspan="5"><input type="button" value="FCFS" name="B3" ONCLICK="FCFS()"> <input type="button" value="RR q=1" name="B4" ONCLICK="RR(1)"> <input type="button" value="RR q=4" name="B5" ONCLICK="RR(4)"> <input type="button" value="SPN" name="B6" ONCLICK="SPN()"> <input type="button" value="SRT" name="B7" ONCLICK="SRT()"> <input type="button" value="HRRN" name="B8" ONCLICK="HRRN()"> <input type="button" value="Fback q=1" name="B9" ONCLICK="FBq1()"><p>Display window #1<input type="radio" value="V1" checked name="winchoice">or window #2<input type="radio" name="winchoice" value="V2"></p>
+              <p><input type="reset" value="Reset" name="B2"></td>
+            </tr>
+          </table>
+        </td>
+        <td width="50%"><input type="text" name="wtitle1" size="30" value="Window #1"><br>
+          <textarea rows="7" name="window1" cols="30" style="background-color: rgb(192,192,192)"></textarea></td>
+      </tr>
+      <tr>
+        <td width="50%"><input type="text" name="wtitle2" size="30" value="Window #2"><br>
+          <textarea rows="7" name="window2" cols="30" style="background-color: rgb(192,192,192)"></textarea></td>
+      </tr>
+    </table>
+  </form>
+</body>
+</html>
